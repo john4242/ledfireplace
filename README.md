@@ -18,7 +18,7 @@ D7 | D
 VCC (USB PWR) | +5V
 GND | GND
 
-It is also recommended to add a capacitor close to the LED strip, 
+![Wiring guide](LEDFireplaceWiring.png)
 
 For any ideas for improvement, feedback, patches, email to:
 johnzero AT johnzero DOT hu
