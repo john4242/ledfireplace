@@ -8,6 +8,7 @@
  * Connect the WS2812 data pin (D) to pin "D7" of the ESP8266 module
  * Connect WS2812 +5V to USB power (+5V) and GND to GND
  * Can be easily adapted also for Arduino
+ * Tested with NodeMCU 0.9 (ESP-12)
  */
 
 #include <Adafruit_NeoPixel.h>
@@ -22,17 +23,16 @@ TickerScheduler ticker(2); // initialize for 2 tasks
 #define RGBPIN         13 // digital 13 on ESP8266 is pin marked with "D7" on PCB!
 #define NUMPIXELS      60 // 60 pixels on RGB LED strip
 #define TASK_ANIM 0
+#define REDUCED_STEPS 1200 // reduced current consumption for 1200 steps (1200 * 55ms)
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, RGBPIN, NEO_GRB + NEO_KHZ800);
 
 #define EEPROM_SIZE 1024
 #define COLORSCALE 8 // 5 bit: 0-31 scaled to x8
-//byte screenMemory[NUMPIXELS * 2];
-//volatile byte gMotionFlag = 0;
-//bool gIsBlanked = false;
-int gAnimationMode = 0;
-int gAnimationIdx = 0;
+unsigned int gAnimationMode = 0;
+unsigned int gAnimationIdx = 0;
 
-int rcolors[4] = {80,120,170,200}; // the 4 possible color intensities for red (and yellow)
+#define NUMPALETTE 4
+int rcolors[NUMPALETTE] = {80,120,170,200}; // the 4 possible color intensities for red (and yellow)
 
 // Do animation gets called every 50 milliseconds
 // It starts up with using about half of the LEDs for the first minute,
@@ -42,9 +42,8 @@ int rcolors[4] = {80,120,170,200}; // the 4 possible color intensities for red (
 void doAnimation( void *dummy) {
   if (gAnimationMode == 0) return;  
   gAnimationIdx++;
-  if ((gAnimationIdx > 1200) && gAnimationMode == 1) gAnimationMode = 2; // reduced mode for 1 minute
+  if ((gAnimationIdx > REDUCED_STEPS) && gAnimationMode == 1) gAnimationMode = 2; // reduced mode for 1 minute
   if (gAnimationIdx > 60000) gAnimationIdx = 0;
-  int idx = gAnimationIdx % 60;
   int color = gAnimationIdx;
 
   for ( int c = 0; c < NUMPIXELS; c++ ) {
@@ -53,7 +52,7 @@ void doAnimation( void *dummy) {
 
     int ra = random(20); // get a random number 0..19
     if (ra > 7) continue; // if > 7 then skip changing this pixel
-    if (ra > 3) ra = 3; // only 4 values in rcolors array [0..3]
+    if (ra >= NUMPALETTE) ra = NUMPALETTE - 1; // only 4 values in rcolors array [0..3]
     cred = rcolors[ra]; // select a color intensity from the table
     cgreen = 0;
     cblue = 0;
@@ -99,6 +98,7 @@ void setup() {
   Serial.begin(115200);
   pixels.setPixelColor(0, pixels.Color(128, 0, 0));
   pixels.show();
+  setupAnimation();
   startAnimationMode(1);
 }
 
